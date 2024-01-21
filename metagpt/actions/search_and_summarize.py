@@ -79,6 +79,8 @@ Yes, I've selected the following for you:
 """
 
 SEARCH_AND_SUMMARIZE_SALES_PROMPT = """
+{SYSTEM_PROMPT}
+
 ## Reference Information
 {CONTEXT}
 
@@ -136,6 +138,7 @@ class SearchAndSummarize(Action):
         system_prompt = [system_text]
 
         prompt = SEARCH_AND_SUMMARIZE_PROMPT.format(
+            SYSTEM_PROMPT=SEARCH_AND_SUMMARIZE_SYSTEM,
             ROLE=self.prefix,
             CONTEXT=rsp,
             QUERY_HISTORY="\n".join([str(i) for i in context[:-1]]),

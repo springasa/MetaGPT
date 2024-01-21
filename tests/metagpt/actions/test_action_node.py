@@ -91,10 +91,10 @@ async def test_action_node_two_layer():
     assert node_b in root.children.values()
 
     # FIXME: ADD MARKDOWN SUPPORT. NEED TO TUNE MARKDOWN SYMBOL FIRST.
-    answer1 = await root.fill(context="what's the answer to 123+456?", schema="json", strgy="simple", llm=LLM())
+    answer1 = await root.fill(context="what's the answer to 123+456?", llm=LLM(), schema="json", strgy="simple")
     assert "579" in answer1.content
 
-    answer2 = await root.fill(context="what's the answer to 123+456?", schema="json", strgy="complex", llm=LLM())
+    answer2 = await root.fill(context="what's the answer to 123+456?", llm=LLM(), schema="json", strgy="complex")
     assert "579" in answer2.content
 
 
