@@ -27,7 +27,7 @@ def define_log_level(print_level="INFO", logfile_level="DEBUG", name: str = None
     return _logger
 
 
-logger = define_log_level()
+logger = define_log_level("DEBUG")
 
 
 def log_llm_stream(msg):

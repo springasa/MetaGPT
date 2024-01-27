@@ -1,13 +1,15 @@
 import sys
-from typing import Optional
+from typing import Optional, Any
 from uuid import uuid4
 
 from aiocron import crontab
-from metagpt.actions import UserRequirement
+from metagpt.actions import UserRequirement, ActionOutput
 from metagpt.actions.action import Action
 from metagpt.actions.action_node import ActionNode
+from metagpt.logs import logger
 from metagpt.roles import Role
 from metagpt.schema import Message
+from metagpt.subscription import SubscriptionRunner
 from metagpt.tools.web_browser_engine import WebBrowserEngine
 from metagpt.utils.common import CodeParser, any_to_str
 from metagpt.utils.parse_html import _get_soup
@@ -195,24 +197,26 @@ class ParseSubRequirement(Action):
 class RunSubscription(Action):
     async def run(self, msgs):
         from metagpt.roles.role import Role
-        from metagpt.subscription import SubscriptionRunner
 
         code = msgs[-1].content
         req = msgs[-2].instruct_content.model_dump()
         urls = req["Crawler URL List"]
         process = req["Crawl Post Processing"]
         spec = req["Cron Expression"]
+        spec = '* * * * *'
         SubAction = self.create_sub_action_cls(urls, code, process)
         SubRole = type("SubRole", (Role,), {})
         role = SubRole()
+        role.name = 'XiaoGang'
+        role.profile = 'Crawler'
         role.init_actions([SubAction])
         runner = SubscriptionRunner()
 
         async def callback(msg):
             print(msg)
-
-        await runner.subscribe(role, CronTrigger(spec), callback)
-        await runner.run()
+        trigger = CronTrigger(spec)
+        await runner.subscribe(role, trigger, callback)
+        return runner
 
     @staticmethod
     def create_sub_action_cls(urls: list[str], code: str, process: str):
@@ -223,6 +227,7 @@ class RunSubscription(Action):
             module = type(sys)(name)
             exec(current, module.__dict__)
             modules[url] = module
+            logger.debug(f'{url=}\n{module=}')
 
         class SubAction(Action):
             async def run(self, *args, **kwargs):
@@ -236,6 +241,12 @@ class RunSubscription(Action):
                 return await self.llm.aask(SUB_ACTION_TEMPLATE.format(process=process, data=data))
 
         return SubAction
+
+
+class AddSubscriptionTask(Action):
+    async def run(self, runner: SubscriptionRunner):
+        logger.info("I will run SubscriptionRunner")
+        await runner.run()
 
 
 # 定义爬虫工程师角色
@@ -273,12 +284,34 @@ class SubscriptionAssistant(Role):
             state = 0
         elif cause_by == any_to_str(WriteCrawlerCode):
             state = 1
-
+        elif cause_by == any_to_str(RunSubscription):
+            state = 2
         if self.rc.state == state:
             self.rc.todo = None
             return False
         self._set_state(state)
         return True
+
+    async def _act(self) -> Message:
+        logger.info(f"{self._setting}: to do {self.rc.todo}")
+        response = await self.rc.todo.run(self.rc.history)
+        if isinstance(response, (ActionOutput, ActionNode)):
+            msg = Message(
+                content=response.content,
+                instruct_content=response.instruct_content,
+                role=self._setting,
+                cause_by=self.rc.todo,
+                sent_from=self,
+            )
+        elif isinstance(response, Message):
+            msg = response
+        elif isinstance(response, SubscriptionRunner):
+            self._set_state(2)
+            msg = await self.rc.todo.run(response)
+        else:
+            msg = Message(content=response, role=self.profile, cause_by=self.rc.todo, sent_from=self)
+        self.rc.memory.add(msg)
+        return msg
 
 
 if __name__ == "__main__":
@@ -289,4 +322,4 @@ if __name__ == "__main__":
     team.hire([SubscriptionAssistant(), CrawlerEngineer()])
     team.run_project(
         "从36kr创投平台https://pitchhub.36kr.com/financing-flash爬取所有初创企业融资的信息，获取标题，链接， 时间，总结今天的融资新闻，然后在早上10:56送给我")
-    asyncio.run(team.run())
+    asyncio.run(team.run(5))

@@ -13,7 +13,7 @@ from metagpt.roles.tutorial_assistant import TutorialAssistant
 
 
 async def main():
-    topic = "Write a tutorial about MySQL"
+    topic = "Write a tutorial about Erlang Programming"
     role = TutorialAssistant(language="Chinese")
     await role.run(topic)
 

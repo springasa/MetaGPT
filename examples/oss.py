@@ -11,7 +11,6 @@ from examples.hg_parse import get_hg_articles
 from examples.smtp163 import AsyncMailer
 from metagpt.actions import Action
 from metagpt.config import CONFIG
-from metagpt.environment import Environment
 from metagpt.logs import logger
 from metagpt.roles import Role
 from metagpt.roles.role import RoleReactMode
