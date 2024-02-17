@@ -21,7 +21,10 @@ def make_sk_kernel():
     if llm := config.get_azure_llm():
         kernel.add_chat_service(
             "chat_completion",
-            AzureChatCompletion(llm.model, llm.base_url, llm.api_key),
+            AzureChatCompletion(deployment_name=llm.model,
+                                endpoint=llm.base_url,
+                                api_version=llm.api_version,
+                                api_key=llm.api_key),
         )
     elif llm := config.get_openai_llm():
         kernel.add_chat_service(

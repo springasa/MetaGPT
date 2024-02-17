@@ -14,6 +14,7 @@ from semantic_kernel.planning import SequentialPlanner
 from semantic_kernel.planning.action_planner.action_planner import ActionPlanner
 
 from metagpt.actions import UserRequirement
+from metagpt.config2 import config
 from metagpt.const import SKILL_DIRECTORY
 from metagpt.roles.sk_agent import SkAgent
 from metagpt.schema import Message
@@ -61,7 +62,7 @@ async def basic_planner_web_search_example():
     Question: Who made the 1989 comic book, the film version of which Jon Raymond Polito appeared in?"""
     role = SkAgent()
 
-    role.import_skill(SkSearchEngine(), "WebSearchSkill")
+    role.import_skill(SkSearchEngine(**config.search.dict()), "WebSearchSkill")
     # role.import_semantic_skill_from_directory(skills_directory, "QASkill")
 
     await role.run(Message(content=task, cause_by=UserRequirement))
