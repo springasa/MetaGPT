@@ -483,27 +483,34 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
 
     async def _plan_and_act(self) -> Message:
         """first plan, then execute an action sequence, i.e. _think (of a plan) -> _act -> _act -> ... Use llm to come up with the plan dynamically."""
+        rsp = Message(content="No action plan taken yet", cause_by=Action)
+        await self._think_plan()
+        # take on tasks until all finished
+        while self.planner.current_task:
+            # if self.rc.todo is None:
+            #     break
+            rsp = await self._act_plan() # TODO:重构
+            # rsp = await self._act()
+        return rsp
 
+    async def _act_plan(self):
+        task = self.planner.current_task
+        logger.info(f"ready to take on task {task}")
+        # take on current task
+        task_result = await self._act_on_task(task)
+        # process the result, such as reviewing, confirming, plan updating
+        await self.planner.process_task_result(task_result)
+        rsp = self.planner.get_useful_memories()[0]  # return the completed plan as a response
+        self.rc.memory.add(rsp)  # add to persistent memory
+        return rsp
+
+    async def _think_plan(self):
         # create initial plan and update it until confirmation
         goal = self.rc.memory.get()[-1].content  # retreive latest user requirement
         await self.planner.update_plan(goal=goal)
 
-        # take on tasks until all finished
-        while self.planner.current_task:
-            task = self.planner.current_task
-            logger.info(f"ready to take on task {task}")
-
-            # take on current task
-            task_result = await self._act_on_task(task)
-
-            # process the result, such as reviewing, confirming, plan updating
-            await self.planner.process_task_result(task_result)
-
-        rsp = self.planner.get_useful_memories()[0]  # return the completed plan as a response
-
-        self.rc.memory.add(rsp)  # add to persistent memory
-
-        return rsp
+        # init actions
+        return True
 
     async def _act_on_task(self, current_task: Task) -> TaskResult:
         """Taking specific action to handle one task in plan

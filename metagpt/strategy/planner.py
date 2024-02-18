@@ -46,8 +46,9 @@ class Planner(BaseModel):
     def current_task_id(self):
         return self.plan.current_task_id
 
-    async def update_plan(self, goal: str = "", max_tasks: int = 10, max_retries: int = 3):
+    async def update_plan(self, goal: str = "", max_tasks: int = 5, max_retries: int = 3):
         if goal:
+            logger.debug(f"plan for {goal=}")
             self.plan = Plan(goal=goal)
 
         plan_confirmed = False
